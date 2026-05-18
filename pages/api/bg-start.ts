@@ -29,6 +29,24 @@ function getProxyAgent() {
   return new ProxyAgent(proxyUrl);
 }
 
+function isLoadTestMode() {
+  return process.env.LOAD_TEST_MODE === "true";
+}
+
+function createRequestId() {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function logPerformance(data: Record<string, unknown>) {
+  console.log(
+    JSON.stringify({
+      service: "landscape-plan-ai",
+      timestamp: new Date().toISOString(),
+      ...data,
+    })
+  );
+}
+
 function validateAccessCode(accessCode?: string) {
   const demoCode = process.env.DEMO_ACCESS_CODE;
 
@@ -86,6 +104,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const requestId = createRequestId();
+  const apiStartTime = Date.now();
+
   try {
     if (req.method === "GET") {
       return res.status(200).json({
@@ -96,6 +117,10 @@ export default async function handler(
         proxy: getProxyUrl() || "not set",
         quality: "medium",
         accessProtection: Boolean(process.env.DEMO_ACCESS_CODE),
+        loadTestMode: isLoadTestMode(),
+        mockGenerationDelayMs: Number(
+          process.env.MOCK_GENERATION_DELAY_MS || 3000
+        ),
         time: new Date().toISOString(),
       });
     }
@@ -103,16 +128,6 @@ export default async function handler(
     if (req.method !== "POST") {
       return res.status(405).json({
         error: "Method not allowed. Use POST.",
-      });
-    }
-
-    const apiKey = process.env.OPENAI_API_KEY;
-    const mainModel = process.env.OPENAI_MAIN_MODEL || "gpt-5.2";
-    const imageModel = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
-
-    if (!apiKey) {
-      return res.status(500).json({
-        error: "服务器缺少 OPENAI_API_KEY，请检查 .env.local。",
       });
     }
 
@@ -125,6 +140,15 @@ export default async function handler(
     const accessResult = validateAccessCode(accessCode);
 
     if (!accessResult.ok) {
+      logPerformance({
+        requestId,
+        endpoint: "bg-start",
+        mode: isLoadTestMode() ? "mock" : "real",
+        status: "access_denied",
+        typeId,
+        durationMs: Date.now() - apiStartTime,
+      });
+
       return res.status(401).json({
         error: accessResult.message,
       });
@@ -147,6 +171,49 @@ export default async function handler(
     if (!drawingType) {
       return res.status(400).json({
         error: "未知图纸类型。",
+      });
+    }
+
+    const imageDataSizeKb = Math.round(imageDataUrl.length / 1024);
+
+    if (isLoadTestMode()) {
+      const mockResponseId = `mock_${drawingType.id}_${Date.now()}_${Math.random()
+        .toString(36)
+        .slice(2, 10)}`;
+
+      logPerformance({
+        requestId,
+        endpoint: "bg-start",
+        mode: "mock",
+        status: "created",
+        typeId: drawingType.id,
+        title: drawingType.title,
+        imageDataSizeKb,
+        durationMs: Date.now() - apiStartTime,
+      });
+
+      return res.status(200).json({
+        responseId: mockResponseId,
+        status: "in_progress",
+        id: drawingType.id,
+        title: drawingType.title,
+        mock: true,
+        metrics: {
+          requestId,
+          mode: "mock",
+          imageDataSizeKb,
+          apiDurationMs: Date.now() - apiStartTime,
+        },
+      });
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
+    const mainModel = process.env.OPENAI_MAIN_MODEL || "gpt-5.2";
+    const imageModel = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1.5";
+
+    if (!apiKey) {
+      return res.status(500).json({
+        error: "服务器缺少 OPENAI_API_KEY，请检查环境变量。",
       });
     }
 
@@ -184,6 +251,7 @@ export default async function handler(
     };
 
     const proxyAgent = getProxyAgent();
+    const openaiStartTime = Date.now();
 
     const openaiResponse = await undiciFetch(
       "https://api.openai.com/v1/responses",
@@ -198,6 +266,7 @@ export default async function handler(
       }
     );
 
+    const openaiCreateDurationMs = Date.now() - openaiStartTime;
     const responseText = await openaiResponse.text();
 
     let data: any;
@@ -205,13 +274,37 @@ export default async function handler(
     try {
       data = JSON.parse(responseText);
     } catch {
+      logPerformance({
+        requestId,
+        endpoint: "bg-start",
+        mode: "real",
+        status: "openai_non_json",
+        typeId: drawingType.id,
+        imageDataSizeKb,
+        openaiCreateDurationMs,
+        durationMs: Date.now() - apiStartTime,
+      });
+
       return res.status(500).json({
-        error:
-          "OpenAI 返回了非 JSON 内容：" + responseText.slice(0, 1200),
+        error: "OpenAI 返回了非 JSON 内容：" + responseText.slice(0, 1200),
       });
     }
 
     if (!openaiResponse.ok) {
+      logPerformance({
+        requestId,
+        endpoint: "bg-start",
+        mode: "real",
+        status: "openai_error",
+        typeId: drawingType.id,
+        title: drawingType.title,
+        imageDataSizeKb,
+        openaiCreateDurationMs,
+        durationMs: Date.now() - apiStartTime,
+        openaiStatus: openaiResponse.status,
+        openaiError: data?.error?.message || data?.message || "unknown",
+      });
+
       return res.status(openaiResponse.status).json({
         error:
           data?.error?.message ||
@@ -221,13 +314,43 @@ export default async function handler(
       });
     }
 
+    logPerformance({
+      requestId,
+      endpoint: "bg-start",
+      mode: "real",
+      status: "created",
+      typeId: drawingType.id,
+      title: drawingType.title,
+      imageDataSizeKb,
+      openaiResponseId: data.id,
+      openaiInitialStatus: data.status,
+      openaiCreateDurationMs,
+      durationMs: Date.now() - apiStartTime,
+    });
+
     return res.status(200).json({
       responseId: data.id,
       status: data.status,
       id: drawingType.id,
       title: drawingType.title,
+      metrics: {
+        requestId,
+        mode: "real",
+        imageDataSizeKb,
+        openaiCreateDurationMs,
+        apiDurationMs: Date.now() - apiStartTime,
+      },
     });
   } catch (error) {
+    logPerformance({
+      requestId,
+      endpoint: "bg-start",
+      mode: isLoadTestMode() ? "mock" : "real",
+      status: "server_error",
+      durationMs: Date.now() - apiStartTime,
+      error: error instanceof Error ? error.message : "unknown",
+    });
+
     return res.status(500).json({
       error:
         error instanceof Error
