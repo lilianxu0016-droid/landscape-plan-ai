@@ -1,0 +1,431 @@
+{
+  "root_group": {
+    "groups": [
+      {
+        "name": "setup",
+        "path": "::setup",
+        "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 1,
+              "fails": 0,
+              "name": "health bg-start is 200",
+              "path": "::setup::health bg-start is 200",
+              "id": "ccc0da036b019d75c61e326046d1bf21"
+            },
+            {
+              "name": "health bg-check is 200",
+              "path": "::setup::health bg-check is 200",
+              "id": "54de3a751f261610666c87c76f6fc8ac",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "check access code",
+        "path": "::check access code",
+        "id": "b443c36ab39cf932a2bb299c681be136",
+        "groups": [],
+        "checks": [
+            {
+              "name": "check-access status is 200",
+              "path": "::check access code::check-access status is 200",
+              "id": "86c3296080527949df3b4df442cec4f5",
+              "passes": 112,
+              "fails": 119
+            }
+          ]
+      },
+      {
+        "name": "generate nine mock images",
+        "path": "::generate nine mock images",
+        "id": "13f38339ea9f3f400b1207a9264d0c5c",
+        "groups": [],
+        "checks": [
+            {
+              "name": "bg-start status is 200",
+              "path": "::generate nine mock images::bg-start status is 200",
+              "id": "8c74743ba9443772d050da89c6e60177",
+              "passes": 378,
+              "fails": 267
+            },
+            {
+              "name": "bg-start has responseId",
+              "path": "::generate nine mock images::bg-start has responseId",
+              "id": "490f02ceb1736be8201c47aedb4aaf37",
+              "passes": 378,
+              "fails": 267
+            },
+            {
+              "name": "bg-check status is 200",
+              "path": "::generate nine mock images::bg-check status is 200",
+              "id": "1661bda023a6412f83b50ccba0ed955b",
+              "passes": 946,
+              "fails": 35
+            },
+            {
+              "name": "bg-check has image",
+              "path": "::generate nine mock images::bg-check has image",
+              "id": "6c93ed5075b457034fba2c20c83211ff",
+              "passes": 295,
+              "fails": 0
+            }
+          ]
+      }
+    ],
+    "checks": [],
+    "name": "",
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdOutTTY": true,
+    "isStdErrTTY": true,
+    "testRunDurationMs": 67276.5915
+  },
+  "metrics": {
+    "completed_nine_images_rate": {
+      "contains": "default",
+      "values": {
+        "rate": 0.08791208791208792,
+        "passes": 16,
+        "fails": 166
+      },
+      "thresholds": {
+        "rate>0.90": {
+          "ok": false
+        }
+      },
+      "type": "rate"
+    },
+    "access_fail_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.5151515151515151,
+        "passes": 119,
+        "fails": 112
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 2.3689,
+        "p(90)": 0.5404400000000001,
+        "p(95)": 0.6282,
+        "avg": 0.15939037116729415
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "med": 665.69985,
+        "max": 1364.2779,
+        "p(90)": 795.2328699999999,
+        "p(95)": 816.08,
+        "avg": 634.1436693324054,
+        "min": 352.8284
+      }
+    },
+    "bg_check_duration": {
+      "values": {
+        "avg": 644.237410805301,
+        "min": 78.7804,
+        "med": 678.9322,
+        "max": 1204.7949,
+        "p(90)": 801.4139,
+        "p(95)": 824.5128
+      },
+      "type": "trend",
+      "contains": "default"
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 3425409,
+        "rate": 50915.317254144786
+      }
+    },
+    "http_req_connecting": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 2.3880165142549763,
+        "min": 0,
+        "med": 0,
+        "max": 126.6685,
+        "p(90)": 0,
+        "p(95)": 0
+      }
+    },
+    "http_req_tls_handshaking": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 0,
+        "avg": 2.520951963421194,
+        "min": 0,
+        "med": 0,
+        "max": 196.8937,
+        "p(90)": 0
+      }
+    },
+    "vus": {
+      "contains": "default",
+      "values": {
+        "value": 50,
+        "min": 0,
+        "max": 50
+      },
+      "type": "gauge"
+    },
+    "checks": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.7541979278313683,
+        "passes": 2111,
+        "fails": 688
+      }
+    },
+    "iteration_duration": {
+      "values": {
+        "avg": 9316.496647802196,
+        "min": 1078.8134,
+        "med": 1086.9926,
+        "max": 42740.5605,
+        "p(90)": 38610.58233,
+        "p(95)": 41789.178065
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "bg_start_fail_rate": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.413953488372093,
+        "passes": 267,
+        "fails": 378
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      }
+    },
+    "failed_access_count": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 119,
+        "rate": 1.7688173159010294
+      }
+    },
+    "vus_max": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 100,
+        "min": 100,
+        "max": 100
+      }
+    },
+    "http_req_waiting": {
+      "contains": "time",
+      "values": {
+        "min": 75.0539,
+        "med": 575.1915,
+        "max": 1363.8811,
+        "p(90)": 787.08988,
+        "p(95)": 807.15748,
+        "avg": 508.6734505110274
+      },
+      "type": "trend"
+    },
+    "http_reqs": {
+      "values": {
+        "count": 1859,
+        "rate": 27.632196556806836
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "iterations": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 182,
+        "rate": 2.7052500125545156
+      }
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "min": 75.0539,
+        "med": 575.4066,
+        "max": 1364.2779,
+        "p(90)": 788.4674200000001,
+        "p(95)": 808.41905,
+        "avg": 509.9048455621293
+      },
+      "thresholds": {
+        "p(95)<10000": {
+          "ok": true
+        }
+      }
+    },
+    "group_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 5255.1958207483,
+        "min": 78.6903,
+        "med": 536.23615,
+        "max": 41211.9982,
+        "p(90)": 23643.17776999999,
+        "p(95)": 39591.113
+      }
+    },
+    "failed_start_count": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 267,
+        "rate": 3.968690952483822
+      }
+    },
+    "bg_check_fail_rate": {
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      },
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "fails": 295,
+        "rate": 0.10606060606060606,
+        "passes": 35
+      }
+    },
+    "full_iteration_duration": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "max": 41740,
+        "p(90)": 37609.1,
+        "p(95)": 40789.15,
+        "avg": 8316.021978021978,
+        "min": 79,
+        "med": 86.5
+      }
+    },
+    "failed_check_count": {
+      "values": {
+        "count": 35,
+        "rate": 0.5202403870297145
+      },
+      "type": "counter",
+      "contains": "default"
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 373509,
+        "rate": 5551.841906259476
+      }
+    },
+    "access_duration": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "avg": 293.8762393939393,
+        "min": 76.9362,
+        "med": 94.8249,
+        "max": 807.4533,
+        "p(90)": 677.4803,
+        "p(95)": 758.21925
+      }
+    },
+    "bg_start_duration": {
+      "type": "trend",
+      "contains": "default",
+      "values": {
+        "p(90)": 727.90206,
+        "p(95)": 779.023,
+        "avg": 382.9158479069768,
+        "min": 75.0539,
+        "med": 407.7262,
+        "max": 1364.2779
+      }
+    },
+    "http_req_blocked": {
+      "contains": "time",
+      "values": {
+        "min": 0,
+        "med": 0,
+        "max": 292.3469,
+        "p(90)": 0,
+        "p(95)": 0,
+        "avg": 4.931417805271653
+      },
+      "type": "trend"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 1.052120000000001,
+        "p(95)": 1.7369799999999986,
+        "avg": 1.0720046799354497,
+        "min": 0,
+        "med": 0.11,
+        "max": 386.5837
+      }
+    },
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.22646584185045723,
+        "passes": 421,
+        "fails": 1438
+      },
+      "thresholds": {
+        "rate<0.05": {
+          "ok": false
+        }
+      }
+    }
+  },
+  "setup_data": {
+    "baseUrl": "https://startling-lollipop-ae1002.netlify.app"
+  }
+}
