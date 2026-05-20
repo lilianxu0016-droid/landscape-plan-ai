@@ -104,14 +104,160 @@ function formatSeconds(value: number) {
   return minutes + " 分 " + seconds + " 秒";
 }
 
+
+function dataUrlToFile(dataUrl: string, fileName: string) {
+  const parts = dataUrl.split(",");
+  const header = parts[0] || "";
+  const base64 = parts[1] || "";
+  const mimeMatch = header.match(/data:(.*?);base64/);
+  const mime = mimeMatch?.[1] || "image/jpeg";
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new File([bytes], fileName || "landscape-sketch.jpg", {
+    type: mime,
+  });
+}
+
 function getImageUrlFromResponse(data: any): string | undefined {
-  return (
-    data?.image?.imageUrl ||
-    data?.imageUrl ||
-    data?.url ||
-    data?.output?.imageUrl ||
-    data?.result?.imageUrl
-  );
+  function normalize(value: any): string | undefined {
+    if (typeof value !== "string") return undefined;
+
+    const trimmed = value.trim();
+
+    if (!trimmed) return undefined;
+
+    if (
+      trimmed.startsWith("http://") ||
+      trimmed.startsWith("https://") ||
+      trimmed.startsWith("data:image/") ||
+      trimmed.startsWith("/")
+    ) {
+      return trimmed;
+    }
+
+    // 兼容 OpenAI / 后端返回纯 base64 的情况
+    if (
+      trimmed.length > 300 &&
+      !trimmed.includes(" ") &&
+      /^[A-Za-z0-9+/=]+$/.test(trimmed)
+    ) {
+      return "data:image/png;base64," + trimmed;
+    }
+
+    return undefined;
+  }
+
+  const directCandidates = [
+    data?.imageUrl,
+    data?.image_url,
+    data?.url,
+    data?.dataUrl,
+    data?.dataURL,
+    data?.imageDataUrl,
+    data?.imageDataURL,
+    data?.generatedImageUrl,
+    data?.resultUrl,
+    data?.outputUrl,
+    data?.src,
+
+    data?.image,
+    data?.result,
+    data?.output,
+
+    data?.image?.imageUrl,
+    data?.image?.image_url,
+    data?.image?.url,
+    data?.image?.dataUrl,
+    data?.image?.imageDataUrl,
+    data?.image?.b64_json,
+    data?.image?.base64,
+
+    data?.result?.imageUrl,
+    data?.result?.image_url,
+    data?.result?.url,
+    data?.result?.dataUrl,
+    data?.result?.imageDataUrl,
+    data?.result?.b64_json,
+    data?.result?.base64,
+
+    data?.output?.imageUrl,
+    data?.output?.image_url,
+    data?.output?.url,
+    data?.output?.dataUrl,
+    data?.output?.imageDataUrl,
+    data?.output?.b64_json,
+    data?.output?.base64,
+
+    data?.images?.[0]?.imageUrl,
+    data?.images?.[0]?.url,
+    data?.images?.[0]?.dataUrl,
+    data?.images?.[0]?.imageDataUrl,
+    data?.images?.[0]?.b64_json,
+    data?.images?.[0]?.base64,
+
+    data?.data?.[0]?.url,
+    data?.data?.[0]?.b64_json,
+    data?.data?.[0]?.base64,
+
+    data?.output?.[0]?.url,
+    data?.output?.[0]?.b64_json,
+    data?.output?.[0]?.base64,
+  ];
+
+  for (const item of directCandidates) {
+    const normalized = normalize(item);
+
+    if (normalized) return normalized;
+  }
+
+  // 最后一层保险：递归扫描返回对象里的所有字段
+  const visited = new Set<any>();
+
+  function walk(node: any): string | undefined {
+    if (!node || typeof node !== "object") {
+      return normalize(node);
+    }
+
+    if (visited.has(node)) return undefined;
+    visited.add(node);
+
+    const priorityKeys = [
+      "imageUrl",
+      "image_url",
+      "url",
+      "dataUrl",
+      "imageDataUrl",
+      "b64_json",
+      "base64",
+      "src",
+    ];
+
+    for (const key of priorityKeys) {
+      const found = normalize(node[key]);
+      if (found) return found;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        const found = walk(item);
+        if (found) return found;
+      }
+    } else {
+      for (const value of Object.values(node)) {
+        const found = walk(value);
+        if (found) return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  return walk(data);
 }
 
 async function readImageAsCompressedDataUrl(file: File): Promise<string> {
@@ -318,34 +464,47 @@ export default function Home() {
     });
 
     try {
+      const imageFile = dataUrlToFile(
+        sourceImageDataUrl,
+        sourceFileName || "landscape-sketch.jpg"
+      );
+
+      const prompt =
+        "请基于用户上传的景观设计草图，生成「" +
+        target.title +
+        "」。要求保留原草图的空间结构、边界、水体、道路和节点关系，并按照专业景观设计表达方式输出。" +
+        target.subtitle;
+
+      const formData = new FormData();
+
+      formData.append("accessCode", accessCode);
+      formData.append("image", imageFile);
+      formData.append("file", imageFile);
+      formData.append("sketch", imageFile);
+
+      formData.append("typeId", target.id);
+      formData.append("drawingTypeId", target.id);
+      formData.append("drawingType", target.title);
+      formData.append("drawingTypeTitle", target.title);
+      formData.append("drawingTypeSubtitle", target.subtitle);
+
+      formData.append("title", target.title);
+      formData.append("prompt", prompt);
+      formData.append(
+        "projectDescription",
+        "基于上传的景观设计草图生成：" + target.title + "。" + target.subtitle
+      );
+      formData.append("description", target.subtitle);
+      formData.append("style", target.title);
+      formData.append("selectedStyle", target.title);
+      formData.append("quality", "medium");
+
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "X-Demo-Access-Code": accessCode,
         },
-        body: JSON.stringify({
-          accessCode,
-          imageDataUrl: sourceImageDataUrl,
-          typeId: target.id,
-          drawingTypeId: target.id,
-          drawingTypeTitle: target.title,
-          drawingTypeSubtitle: target.subtitle,
-          title: target.title,
-          prompt:
-            "请基于用户上传的景观设计草图，生成「" +
-            target.title +
-            "」。要求保留原草图的空间结构、边界、水体、道路和节点关系，并按照专业景观设计表达方式输出。" +
-            target.subtitle,
-          projectDescription:
-            "基于上传的景观设计草图生成：" +
-            target.title +
-            "。" +
-            target.subtitle,
-          style: target.title,
-          selectedStyle: target.title,
-          quality: "medium",
-        }),
+        body: formData,
       });
 
       const data = await response.json().catch(() => null);
