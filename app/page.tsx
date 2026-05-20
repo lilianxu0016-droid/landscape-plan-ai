@@ -14,7 +14,6 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
-import ExampleShowcase from "./components/ExampleShowcase";
 
 type DrawStatus = "idle" | "running" | "succeeded" | "failed";
 
@@ -438,6 +437,107 @@ export default function Home() {
     );
   }
 
+  
+  async function getExampleImageAsDataUrl(url: string) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error("示例草图加载失败，请检查 public/examples/upload-sketch-guide.png 是否存在。");
+    }
+
+    const blob = await response.blob();
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error("示例草图读取失败。"));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  function getQuickExperienceImageUrl(title: string) {
+    if (title.includes("彩色") || title.includes("总平面")) {
+      return "/examples/master-plan-01.png";
+    }
+
+    if (title.includes("功能") || title.includes("分区")) {
+      return "/examples/zoning-01.png";
+    }
+
+    if (title.includes("流线")) {
+      return "/examples/circulation-01.png";
+    }
+
+    if (title.includes("竖向")) {
+      return "/examples/grading-01.png";
+    }
+
+    if (title.includes("剖面")) {
+      return "/examples/section-01.png";
+    }
+
+    if (title.includes("节点")) {
+      return "/examples/node-01.png";
+    }
+
+    if (title.includes("鸟瞰")) {
+      return "/examples/birdview-01.png";
+    }
+
+    if (title.includes("人视点") || title.includes("效果")) {
+      return "/examples/perspective-01.png";
+    }
+
+    if (title.includes("爆炸")) {
+      return "/examples/exploded-01.png";
+    }
+
+    return "/examples/master-plan-01.png";
+  }
+
+  function wait(ms: number) {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+  }
+
+  async function handleQuickExperience() {
+    try {
+      setGlobalError("");
+
+      // 快速体验只展示示例生成结果，不占用用户上传区。
+      // 因此这里不再 setSourceImageDataUrl，也不再 setSourceFileName，
+      // 保证“1. 上传设计草图”始终保持原来的空白上传状态。
+
+      for (const item of DRAWING_TYPES) {
+        updateResult(item.id, {
+          status: "running",
+          message: "示例生成中",
+          imageUrl: undefined,
+          responseId: undefined,
+          seconds: undefined,
+        });
+
+        await wait(550);
+
+        updateResult(item.id, {
+          status: "succeeded",
+          message: "示例生成完成",
+          imageUrl: getQuickExperienceImageUrl(item.title),
+          responseId: "quick-experience-" + item.id,
+          seconds: 1,
+        });
+      }
+
+      window.alert("这是示例生成结果，现在你可以上传自己的草图试试啦。");
+    } catch (error) {
+      setGlobalError(
+        error instanceof Error
+          ? error.message
+          : "快速体验加载失败，请检查示例图片是否存在。"
+      );
+    }
+  }
+
   async function generateOne(typeId: string) {
     const target = DRAWING_TYPES.find((item) => item.id === typeId);
 
@@ -698,10 +798,7 @@ export default function Home() {
           当前版本重点验证“能不能稳定生成九张”。质量暂时不评价。生成过程中请不要刷新页面。
           如果中途某张失败，可以在对应卡片里单独重试，不需要重新生成已成功图片。
         </div>
-
-        <ExampleShowcase />
-
-        {globalError && (
+{globalError && (
           <div className="flex items-start gap-3 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-sm leading-6 text-red-600">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             {globalError}
@@ -710,7 +807,55 @@ export default function Home() {
 
         <section className="grid gap-6 lg:grid-cols-[380px_1fr]">
           <div className="space-y-6">
-            <section className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
+            
+            <section
+              id="quick-experience-entry"
+              className="rounded-[28px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-[#f8f5ed] p-5 shadow-sm"
+            >
+              <div className="flex flex-col gap-4">
+                <div>
+                  <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                    零点击一键体验
+                  </span>
+                  <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-950">
+                    立即体验，无需上传
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    点击后系统会自动使用预设草图，并按完整流程展示九类景观设计图纸生成结果。
+                    这个体验模式使用示例成图，不消耗你的 OpenAI API 额度，适合用户快速理解产品能力。
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleQuickExperience}
+                  className="inline-flex w-full items-center justify-center rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-black"
+                >
+                  立即体验，无需上传
+                </button>
+
+                <div className="grid gap-2 text-[11px] leading-5 text-slate-500 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-white/80 p-3">
+                    <span className="font-semibold text-slate-800">自动载入草图</span>
+                    <br />
+                    使用系统内置示例草图作为输入。
+                  </div>
+                  <div className="rounded-2xl bg-white/80 p-3">
+                    <span className="font-semibold text-slate-800">自动展示九类图纸</span>
+                    <br />
+                    总平面、功能、流线、竖向、剖面等依次呈现。
+                  </div>
+                  <div className="rounded-2xl bg-white/80 p-3">
+                    <span className="font-semibold text-slate-800">体验后再上传</span>
+                    <br />
+                    用户理解流程后，可继续上传自己的草图。
+                  </div>
+                </div>
+              </div>
+            </section>
+
+
+          <section className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
               <h2 className="text-xl font-semibold">1. 上传设计草图</h2>
 
               <p className="mt-3 text-sm leading-6 text-zinc-500">
@@ -753,7 +898,54 @@ export default function Home() {
                   当前文件：{sourceFileName}
                 </p>
               )}
-            </section>
+            
+            <div
+              id="upload-sketch-guide"
+              className="mt-5 rounded-[24px] border border-dashed border-slate-200 bg-[#f8f5ed] p-4"
+            >
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-950">草图上传示例</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500">
+                    建议上传总平面草图、手绘线稿或概念平面图。场地边界、水体、道路、主要节点和空间结构越清晰，生成结果越稳定。
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 shadow-sm">
+                  Example
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-[20px] border border-white/80 bg-white shadow-sm">
+                <img
+                  src="/examples/upload-sketch-guide.png"
+                  alt="草图上传示例"
+                  className="h-auto w-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = "/examples/sketch-01.jpg";
+                  }}
+                />
+              </div>
+
+              <div className="mt-3 grid gap-2 text-[11px] leading-5 text-slate-500 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white/70 p-3">
+                  <span className="font-semibold text-slate-800">边界清楚</span>
+                  <br />
+                  保留场地范围、道路和周边关系。
+                </div>
+                <div className="rounded-2xl bg-white/70 p-3">
+                  <span className="font-semibold text-slate-800">结构完整</span>
+                  <br />
+                  尽量体现水体、路径、节点和功能空间。
+                </div>
+                <div className="rounded-2xl bg-white/70 p-3">
+                  <span className="font-semibold text-slate-800">图面干净</span>
+                  <br />
+                  避免过多无关文字、截图水印或杂乱背景。
+                </div>
+              </div>
+            </div>
+
+          </section>
 
             <section className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm">
               <h2 className="text-xl font-semibold">2. 后台生成成图纸</h2>
