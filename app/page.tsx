@@ -311,102 +311,63 @@ export default function Home() {
 
     updateResult(typeId, {
       status: "running",
-      message: "正在创建后台任务",
+      message: "正在调用 /api/generate",
       imageUrl: undefined,
       responseId: undefined,
       seconds: undefined,
     });
 
     try {
-      const startResponse = await fetch("/api/bg-start", {
+      const response = await fetch("/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-Demo-Access-Code": accessCode,
         },
         body: JSON.stringify({
-          imageDataUrl: sourceImageDataUrl,
-          typeId,
           accessCode,
+          imageDataUrl: sourceImageDataUrl,
+          typeId: target.id,
+          drawingTypeId: target.id,
+          drawingTypeTitle: target.title,
+          drawingTypeSubtitle: target.subtitle,
+          title: target.title,
+          prompt:
+            "请基于用户上传的景观设计草图，生成「" +
+            target.title +
+            "」。要求保留原草图的空间结构、边界、水体、道路和节点关系，并按照专业景观设计表达方式输出。" +
+            target.subtitle,
+          projectDescription:
+            "基于上传的景观设计草图生成：" +
+            target.title +
+            "。" +
+            target.subtitle,
+          style: target.title,
+          selectedStyle: target.title,
           quality: "medium",
         }),
       });
 
-      const startData = await startResponse.json().catch(() => null);
+      const data = await response.json().catch(() => null);
 
-      if (!startResponse.ok || startData?.error) {
-        throw new Error(startData?.error || "创建后台任务失败。");
+      if (!response.ok || data?.ok === false || data?.error) {
+        throw new Error(data?.error || data?.message || "生成失败。");
       }
 
-      const responseId = startData?.responseId || startData?.id;
+      const imageUrl = getImageUrlFromResponse(data);
 
-      if (!responseId) {
-        const directImageUrl = getImageUrlFromResponse(startData);
-
-        if (directImageUrl) {
-          updateResult(typeId, {
-            status: "succeeded",
-            message: "生成完成",
-            imageUrl: directImageUrl,
-            seconds: Math.round((Date.now() - startedAt) / 1000),
-          });
-          return true;
-        }
-
-        throw new Error("后台没有返回 responseId。");
+      if (!imageUrl) {
+        throw new Error("生成接口已返回，但没有找到图片地址。");
       }
 
       updateResult(typeId, {
-        responseId,
-        message: "后台生成中",
+        status: "succeeded",
+        message: "生成完成",
+        imageUrl,
+        seconds: Math.round((Date.now() - startedAt) / 1000),
       });
 
-      for (let pollIndex = 0; pollIndex < 90; pollIndex += 1) {
-        await sleep(5000);
-
-        const checkUrl =
-          "/api/bg-check?responseId=" +
-          encodeURIComponent(responseId) +
-          "&typeId=" +
-          encodeURIComponent(typeId) +
-          "&title=" +
-          encodeURIComponent(target.title);
-
-        const checkResponse = await fetch(checkUrl, {
-          headers: {
-            "X-Demo-Access-Code": accessCode,
-          },
-        });
-
-        const checkData = await checkResponse.json().catch(() => null);
-
-        if (!checkResponse.ok || checkData?.error) {
-          throw new Error(checkData?.error || "查询生成状态失败。");
-        }
-
-        const imageUrl = getImageUrlFromResponse(checkData);
-
-        if (checkData?.done === true || imageUrl) {
-          if (!imageUrl) {
-            throw new Error("任务完成，但没有返回图片。");
-          }
-
-          updateResult(typeId, {
-            status: "succeeded",
-            message: "生成完成",
-            imageUrl,
-            seconds: Math.round((Date.now() - startedAt) / 1000),
-          });
-
-          return true;
-        }
-
-        updateResult(typeId, {
-          message: "后台生成中 | 已轮询 " + String(pollIndex + 1) + " 次",
-          seconds: Math.round((Date.now() - startedAt) / 1000),
-        });
-      }
-
-      throw new Error("生成超时，请稍后单独重试。");
+      return true;
     } catch (error) {
       updateResult(typeId, {
         status: "failed",
